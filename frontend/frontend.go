@@ -3,16 +3,18 @@ package main
 // This represents a cache front end server, that front slowdb/slowserver requests
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"github.com/capotej/groupcache-db-experiment/api"
-	"github.com/capotej/groupcache-db-experiment/client"
-	"github.com/golang/groupcache"
 	"net"
 	"net/http"
 	"net/rpc"
 	"os"
 	"strconv"
+
+	"github.com/capotej/groupcache-db-experiment/api"
+	"github.com/capotej/groupcache-db-experiment/client"
+	"github.com/golang/groupcache"
 )
 
 type Frontend struct {
@@ -22,7 +24,7 @@ type Frontend struct {
 func (s *Frontend) Get(args *api.Load, reply *api.ValueResult) error {
 	var data []byte
 	fmt.Printf("cli asked for %s from groupcache\n", args.Key)
-	err := s.cacheGroup.Get(nil, args.Key,
+	err := s.cacheGroup.Get(context.TODO(), args.Key,
 		groupcache.AllocatingByteSliceSink(&data))
 
 	reply.Value = string(data)
@@ -58,7 +60,7 @@ func main() {
 	client := new(client.Client)
 
 	var stringcache = groupcache.NewGroup("SlowDBCache", 64<<20, groupcache.GetterFunc(
-		func(ctx groupcache.Context, key string, dest groupcache.Sink) error {
+		func(ctx context.Context, key string, dest groupcache.Sink) error {
 			result := client.Get(key)
 			fmt.Printf("asking for %s from dbserver\n", key)
 			dest.SetBytes([]byte(result))
